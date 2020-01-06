@@ -1,3 +1,4 @@
+@import "./styles/_colors.scss";
 body {
   height: 100%;
   background: url("assets/images/bg.jpg") no-repeat center center fixed;
@@ -14,12 +15,9 @@ body {
   cursor: pointer;
 }
 
-.MainContainer {
-  margin-top: 10vh;
-}
-
 *::-webkit-scrollbar {
-  width: 1em;
+  width: 0.5em;
+  height: 0.5em;
 }
 
 *::-webkit-scrollbar-track {
@@ -27,11 +25,20 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: darkgrey;
-  outline: 1px solid slategrey;
+  background-color: $yellow;
+  outline: 1px solid $yellow;
+  border-radius: 100px;
 }
 
 .MainPanel {
   transition: 0.8s;
-  min-height: 60vh;
+  min-height: 100vh;
+  padding-top: 16vh;
+  padding-bottom: 16vh;
 }
+
+
+.disabled {
+   pointer-events: none;
+   opacity: 0.3 !important;
+ }

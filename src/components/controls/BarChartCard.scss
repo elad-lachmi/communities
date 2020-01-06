@@ -1,0 +1,107 @@
+@import "../../styles/colors";
+@import "../../styles/vars";
+
+.BarChartCard {
+
+  border: 0;
+  box-shadow: $card-shadow;
+  .chart-container {
+    max-width: 130px;
+    max-height: 170px;
+    height: 170px;
+    padding: 1em 0;
+    min-width: 330px;
+    margin: 0 auto;
+  }
+    .bar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 135px;
+      &:last-child .data-number {
+        display: none;
+      }
+
+      .data-area {
+        height: 80%;
+        padding-bottom: 15px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 2em;
+        .data-container {
+          height: 100%;
+          width: 2rem;
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column-reverse;
+          .data-value {
+            position: relative;
+            height: 100%;
+            opacity: 1;
+            border-radius: 8px;
+            width: 100%;
+            background: $blue;
+            & > div {
+              height: 100%;
+              .data-popover {
+                height: 100%;
+                margin: 0;
+                opacity: 0;
+              }
+            }
+            .popover {
+              top: -5px !important;
+              .popover-body {
+                background: black;
+                min-width: 110px;
+                text-align: center;
+                color: #fff;
+              }
+              .arrow::before, .arrow::after {
+                border-top-color: black;
+              }
+            }
+          }
+
+        }
+      }
+      .data-number {
+        position: absolute;
+        top: 50%;
+        left: -2px;
+        transform: translate(-50%, -50%);
+        font-size: 0.65rem;
+        text-align: left;
+      }
+      .title-area {
+        font-weight: bold;
+        font-size: 0.85em;
+        display: flex;
+        justify-content: center;
+        line-height: 1.25em;
+        text-align: center;
+      }
+    }
+}
+
+@media screen and (max-width: 991px) {
+  .BarChartCard .chart-container {
+    min-width: 500px;
+
+    .data-number {
+      left: -25px;
+    }
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .BarChartCard .chart-container {
+    min-width: 330px;
+
+    .data-number {
+      left: -2px;
+    }
+  }
+}

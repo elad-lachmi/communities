@@ -1,0 +1,49 @@
+//This file is for overriding specific MDBoostrap CSS
+@import "./colors";
+
+.badge {
+  box-shadow: unset;
+  padding: 0.4rem 0.4em;
+  font-size: 0.8rem;
+}
+
+.dropdown-item {
+  transition: 0.3s;
+  &:hover {
+    background-color: $light-yellow;
+  }
+}
+.btn {
+  box-shadow: unset;
+  height: 40px;
+  margin: 0 0.5rem;
+  line-height: 1;
+  display: flex;
+  justify-content: space-around;
+  &.btn[class*="btn-outline-"] {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  &:hover {
+    box-shadow: unset;
+  }
+}
+.dropdown-menu {
+  width: max-content;
+}
+
+tbody {
+  tr {
+    &:hover {
+      background-color: $light-gray !important;
+    }
+  }  
+}
+
+td, th {
+  font-weight: 500 !important;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+}

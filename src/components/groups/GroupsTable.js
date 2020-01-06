@@ -1,285 +1,302 @@
 import React from 'react';
-import { withI18n } from 'react-i18next';
-import { NavLink, withRouter } from 'react-router-dom';
-import { observable } from 'mobx';
-import { observer } from 'mobx-react';
-import { Table, TableHead, TableBody, Input } from 'mdbreact';
-import { action } from 'mobx/lib/mobx';
-import { GroupsService } from '../../services/groups';
-import { TableSummery } from '../controls/TableSummery';
-import { PermissableComponent } from '../controls/PermissableComponent';
+import {NavLink, withRouter} from 'react-router-dom';
+import {Table, TableHead, TableBody, MDBBtn} from 'mdbreact';
+import {GroupsService} from '../../services/groups';
+import {EventsService} from '../../services/events';
+import {TableSummery} from '../controls/TableSummery';
+import {PermissableComponent} from '../controls/PermissableComponent';
 import * as constants from '../../../models/constants';
-import { FloatingDashboard } from '../controls/FloatingDashboard';
-import { EditableItem } from '../controls/EditableItem/EditableItem';
+import {isMobileOnly} from 'react-device-detect';
+import {NumberEditor} from '../controls/NumberEditor';
+import {FiCheckCircle, FiPhone} from 'react-icons/fi';
+import {withI18n} from 'react-i18next';
+import {DataHoverCard} from '../controls/DataHoverCard';
+import {MdMailOutline} from 'react-icons/md';
+import {Loader} from '../Loader';
 
-@observer
 class BaseGroupsTable extends React.Component {
+  groupsService = new GroupsService ();
+  eventsService = new EventsService ();
 
-    groupsService = new GroupsService();
+  get TRANSLATE_PREFIX () {
+    const {match} = this.props;
+    return `${match.params.groupType}:management`;
+  }
 
-    @observable
-    query = '';
-    @observable
-    filterCharts = false;
+  updateGroupsQuota (group, quota) {
+    this.props.presaleQuotaChanged (group, quota);
+  }
 
-    get TRANSLATE_PREFIX() {
-        const {match} = this.props;
-        return `${match.params.groupType}:management`;
+  getFormerEventEntries (group) {
+    if (!group || !group.former_tickets) {
+      return 0;
     }
+    return group.former_tickets.length || 0;
+  }
 
-    @action
-    handleChange = (e) => {
-        this.query = e.target.value;
+  get tableSums () {
+    const {t, groups} = this.props;
+    let membersSum = 0;
+    for (const group of groups) {
+      membersSum += (group.members || []).length || 0;
+    }
+    return {
+      [t (`${this.TRANSLATE_PREFIX}.sums.groups`)]: groups.length,
+      [t (`${this.TRANSLATE_PREFIX}.sums.members`)]: membersSum,
     };
+  }
 
-    filter = (member) => {
-        if (!this.query || !this.query.length) {
-            // No query given - should return all camps
-            return true;
-        }
-        return this.match(member);
-    };
+  get CSVdata () {
+    const {t, groups, presale, lng} = this.props;
+    return groups.map (g => {
+      const baseData = {
+        [t (
+          `${this.TRANSLATE_PREFIX}.table.groupName`
+        )]: this.groupsService.getPropertyByLang (g, 'name', lng),
+        [t (`${this.TRANSLATE_PREFIX}.table.leaderName`)]: this.getManagerProp (
+          g,
+          'name'
+        ),
+        [t (
+          `${this.TRANSLATE_PREFIX}.table.leaderEmail`
+        )]: this.getManagerProp (g, 'email'),
+        [t (
+          `${this.TRANSLATE_PREFIX}.table.leaderPhone`
+        )]: this.getManagerProp (g, 'cell_phone'),
+        [t (`${this.TRANSLATE_PREFIX}.table.totalMembers`)]: (g.members || [])
+          .length,
+        [t (`${this.TRANSLATE_PREFIX}.table.totalPurchased`)]: (g.tickets || [])
+          .length,
+      };
+      const presaleData = presale
+        ? {
+            [t (
+              `${this.TRANSLATE_PREFIX}.table.totalEntered`
+            )]: this.getFormerEventEntries (g),
+            [t (`${this.TRANSLATE_PREFIX}.table.quota`)]: g.quota || 0,
+            [t (
+              `${this.TRANSLATE_PREFIX}.table.allocated`
+            )]: this.getGroupTotalAllocated (
+              g,
+              constants.ALLOCATION_TYPES.PRE_SALE
+            ),
+          }
+        : {};
+      return {
+        ...baseData,
+        ...presaleData,
+      };
+    });
+  }
 
-    match(group) {
-        for (const searchProp of [
-            group.camp_name_he || '',
-            group.camp_name_en || '',
-            group.contact_person_name || '',
-            group.contact_person_email || '',
-            group.contact_person_phone || ''
-        ]) {
-            if (searchProp.toLowerCase().includes(this.query)) {
-                return true
-            }
-        }
-        return false;
+  getGroupQuota (group, key) {
+    const {groupQuotas} = this.props;
+    if (
+      !groupQuotas ||
+      !groupQuotas[key || constants.UNPUBLISHED_ALLOCATION_KEY]
+    ) {
+      return 0;
+    }
+    const groupQuota = groupQuotas[
+      key || constants.UNPUBLISHED_ALLOCATION_KEY
+    ].find (adminAllocation => adminAllocation.group_id === group.id);
+    if (!groupQuota) {
+      return 0;
+    }
+    return groupQuota.count;
+  }
+
+  getTotalUnpublishedAllocations () {
+    const {groupQuotas} = this.props;
+    return groupQuotas[constants.UNPUBLISHED_ALLOCATION_KEY]
+      ? groupQuotas[
+          constants.UNPUBLISHED_ALLOCATION_KEY
+        ].reduce ((result, value) => {
+          result += +value.count || 0;
+          return result;
+        }, 0)
+      : 0;
+  }
+
+  getGroupsBucketCount (group) {
+    const {groupQuotas} = this.props;
+    if (!groupQuotas) {
+      return 0;
+    }
+    return groupQuotas[group.id]
+      ? groupQuotas[group.id].reduce ((result, value) => {
+          result += +value.count || 0;
+          return result;
+        }, 0)
+      : 0;
+  }
+
+  getGroupTotalAllocated (group, allocationType) {
+    const {allocations} = this.props;
+    if (!allocations) {
+      return '';
+    }
+    return allocations.filter (
+      allocation =>
+        allocation.related_group === group.id &&
+        allocation.allocation_type === allocationType
+    ).length;
+  }
+
+  /**
+   * Methods relevant to getting manager details
+   */
+  getManagerProp (group, propName) {
+    if (!group || !group.members) {
+      return ' ';
     }
 
-    updateGroupsQuota(group, quota) {
-        group.pre_sale_tickets_quota = quota;
-        this.props.presaleQuotaChanged(group);
+    const managerId = (group.roles.find(member => member.role === constants.GROUP_STATIC_ROLES.LEADER) || {}).user_id;
+    if (!managerId) {
+      return ' ';
     }
-
-    getFormerEventEntries(group) {
-        if (!group || !group.former_tickets || !group.former_tickets.length) {
-            return 0;
-        }
-        return group.former_tickets.filter(ticket => !!ticket.entrance_timestamp || !!ticket.first_entrance_timestamp).length;
+    const manager = group.members.find (
+      member => member.user_id === managerId
+    );
+    if (manager) {
+      return manager[propName];
+    } else {
+      return '';
     }
+  }
 
-    get tableSums() {
-        const {t, groups, presale} = this.props;
-        let membersSum = 0, ticketsSum = 0, allocatedSum = 0;
-        for (const group of groups) {
-            membersSum += group.members_count || 0;
-            ticketsSum += (group.tickets || []).length;
-            allocatedSum += +group.pre_sale_tickets_quota || 0;
-        }
-        const baseSums = {
-            [t(`${this.TRANSLATE_PREFIX}.sums.groups`)]: groups.length,
-            [t(`${this.TRANSLATE_PREFIX}.sums.members`)]: membersSum,
-            [t(`${this.TRANSLATE_PREFIX}.sums.ticketsAll`)]: ticketsSum,
-        };
-        const presaleSums = presale ? {
-            [t(`${this.TRANSLATE_PREFIX}.sums.allocated`)]: allocatedSum
-        } : {};
-        return {
-            ...baseSums,
-            ...presaleSums
-        }
+  getManagerExtraDetails (group) {
+    return (
+      <div>
+        <div className="d-flex align-items-center">
+          <FiPhone />
+          <span className="ml-2 mr-2">
+            {this.getManagerProp (group, 'cell_phone')}
+          </span>
+        </div>
+        <div className="d-flex align-items-center">
+          <MdMailOutline />
+          <span className="ml-2 mr-2">
+            {this.getManagerProp (group, 'email')}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  render () {
+    const {
+      t,
+      groups,
+      isLoading,
+      presale,
+      groupQuotas,
+      publishQuota,
+      lng,
+    } = this.props;
+    if (isLoading) {
+      return <Loader />;
     }
-
-
-    get CSVdata() {
-        const {t, groups, presale} = this.props;
-        return groups.map(g => {
-            const baseData = {
-                [t(`${this.TRANSLATE_PREFIX}.table.groupName`)]: this.groupsService.getPropertyByLang(g, 'name'),
-                [t(`${this.TRANSLATE_PREFIX}.table.leaderName`)]: g.contact_person_name,
-                [t(`${this.TRANSLATE_PREFIX}.table.leaderEmail`)]: g.contact_person_email,
-                [t(`${this.TRANSLATE_PREFIX}.table.leaderPhone`)]: g.contact_person_phone,
-                [t(`${this.TRANSLATE_PREFIX}.table.totalMembers`)]: g.members_count,
-                [t(`${this.TRANSLATE_PREFIX}.table.totalPurchased`)]: (g.tickets || []).length
-            };
-            const presaleData = presale ? {
-                [t(`${this.TRANSLATE_PREFIX}.table.totalEntered`)]: this.getFormerEventEntries(g),
-                [t(`${this.TRANSLATE_PREFIX}.table.quota`)]: g.quota || 0,
-                [t(`${this.TRANSLATE_PREFIX}.table.allocated`)]: this.getGroupAllocatedCount(g, constants.ALLOCATION_TYPES.PRE_SALE)
-            } : {};
-            return {
-                ...baseData,
-                ...presaleData
-
-            };
-        })
-    }
-
-    get chartData() {
-        const {t, groups, allocations} = this.props;
-        if (!allocations) {
-            return [];
-        }
-        let quotaSum = 0;
-        const filteredCharts = groups.filter(this.filter);
-        for (const group of this.filterCharts ? filteredCharts : groups) {
-            quotaSum += +group.pre_sale_tickets_quota || 0;
-        }
-        const allocatedSum = allocations.filter(allocation => allocation.allocation_type === constants.ALLOCATION_TYPES.PRE_SALE).length;
-        const groupsFullyAllocatedSum = groups.filter(group => {
-            return group.pre_sale_tickets_quota === allocations.filter(allocation => allocation.related_group === group.id).length
-        }).length;
-        const totalAllocationsUsageChart = {
-            title: t(`${this.TRANSLATE_PREFIX}.charts.allocationsUsage`),
-            data: {
-                labels: [
-                    t(`${this.TRANSLATE_PREFIX}.table.allocatedAll`),
-                    t(`${this.TRANSLATE_PREFIX}.sums.allocationsLeft`)
-                ],
-                datasets: [
-                    {
-                        data: [allocatedSum, quotaSum - allocatedSum],
-                        backgroundColor: [
-                            "#F7464A",
-                            "#949FB1",
-                        ],
-                        hoverBackgroundColor: [
-                            "#FF5A5E",
-                            "#A8B3C5",
-                        ]
-                    }
-                ],
-            }
-        };
-        const totalGroupsFullyAllocated = {
-            title: t(`${this.TRANSLATE_PREFIX}.charts.fullGroups`),
-            data: {
-                labels: [
-                    t(`${this.TRANSLATE_PREFIX}.sums.allocationsFull`),
-                    t(`${this.TRANSLATE_PREFIX}.sums.allocationsTotal`)
-                ],
-                datasets: [
-                    {
-                        data: [groupsFullyAllocatedSum, (this.filterCharts ? filteredCharts.length : groups.length) - groupsFullyAllocatedSum],
-                        backgroundColor: [
-                            "#F7464A",
-                            "#949FB1",
-                        ],
-                        hoverBackgroundColor: [
-                            "#FF5A5E",
-                            "#A8B3C5",
-                        ]
-                    }
-                ],
-            }
-        };
-        return [totalAllocationsUsageChart, totalGroupsFullyAllocated];
-    }
-
-    getGroupAllocations(group) {
-        return group.pre_sale_tickets_quota ? group.pre_sale_tickets_quota.toString() : '';
-    }
-
-    getGroupAllocatedCount(group, allocationType) {
-        const {allocations} = this.props;
-        if (!allocations) {
-            return '';
-        }
-        return allocations.filter(allocation => allocation.related_group === group.id && allocation.allocation_type === allocationType).length;
-    }
-
-    render() {
-        const {t, groups, presale, match} = this.props;
-        return (
-            <div>
-                <EditableItem editMode={true} type="checkbox" onChange={(e) => this.filterCharts = e.target.checked}
-                              value={this.filterCharts} title={t('filterCharts')} />
+    const PublishButton = presale
+      ? <MDBBtn className="blue" onClick={publishQuota}>
+          <FiCheckCircle />
+          {t (`${this.TRANSLATE_PREFIX}.table.publish`, {
+            allocationsCount: this.getTotalUnpublishedAllocations (),
+          })}
+        </MDBBtn>
+      : null;
+    return (
+      <div>
+        <PermissableComponent permitted={!isMobileOnly}>
+          <TableSummery
+            csvName={`GroupsAllocationSummery - ${new Date ().toDateString ()}.csv`}
+            moreButtons={PublishButton}
+            sums={this.tableSums}
+            csvData={this.CSVdata}
+          />
+        </PermissableComponent>
+        <Table hover responsive btn className="GroupsTable">
+          <TableHead>
+            <tr>
+              <th>{t (`${this.TRANSLATE_PREFIX}.table.groupName`)}</th>
+              <th>{t (`${this.TRANSLATE_PREFIX}.table.leaderName`)}</th>
+              <th>
+                <span className="pl-1 pr-1">
+                  {t (`${this.TRANSLATE_PREFIX}.table.totalMembers`)}
+                </span>
                 <PermissableComponent permitted={presale}>
-                    <FloatingDashboard charts={this.chartData} title={t('summery')}/>
+                  (
+                  {this.eventsService
+                    .getFormerEventId ()
+                    .replace ('MIDBURN', '')}
+                  )
                 </PermissableComponent>
-                <TableSummery csvName={`GroupsAllocationSummery - ${(new Date()).toDateString()}.csv`}
-                              sums={this.tableSums} csvData={this.CSVdata}/>
-                <Input
-                    className="form-control"
-                    type="text"
-                    hint={t(`${match.params.groupType}:search.title`)}
-                    placeholder={t(`${match.params.groupType}:search.title`)}
-                    aria-label={t(`${match.params.groupType}:search.title`)}
-                    value={this.query}
-                    onChange={this.handleChange}
-                />
-                <Table hover responsive btn>
-                    <TableHead>
-                        <tr>
-                            <th>{t(`${this.TRANSLATE_PREFIX}.table.groupName`)}</th>
-                            <th>{t(`${this.TRANSLATE_PREFIX}.table.leaderName`)}</th>
-                            <th>{t(`${this.TRANSLATE_PREFIX}.table.leaderEmail`)}</th>
-                            <th>{t(`${this.TRANSLATE_PREFIX}.table.leaderPhone`)}</th>
-                            <th>{t(`${this.TRANSLATE_PREFIX}.table.totalMembers`)}</th>
-                            <th>{t(`${this.TRANSLATE_PREFIX}.table.totalPurchased`)}</th>
-                            <PermissableComponent permitted={presale}>
-                                <th>{t(`${this.TRANSLATE_PREFIX}.table.totalEntered`)}</th>
-                            </PermissableComponent>
-                            <PermissableComponent permitted={presale}>
-                                <th>{t(`${this.TRANSLATE_PREFIX}.table.quota`)}</th>
-                            </PermissableComponent>
-                            <PermissableComponent permitted={presale}>
-                                <th>{t(`${this.TRANSLATE_PREFIX}.table.allocated`)}</th>
-                            </PermissableComponent>
-                        </tr>
-                    </TableHead>
-                    <TableBody>
-                        {groups.filter(this.filter).map(g => {
-                            return (
-                                <tr key={g.id}>
-                                    <td>
-                                        <NavLink
-                                            to={`${g.id}`}>{this.groupsService.getPropertyByLang(g, 'name')}</NavLink>
-                                    </td>
-                                    <td>
-                                        {g.contact_person_name}
-                                    </td>
-                                    <td>
-                                        {g.contact_person_email}
-                                    </td>
-                                    <td>
-                                        {g.contact_person_phone}
-                                    </td>
-                                    <td>
-                                        {g.members_count}
-                                    </td>
-                                    <td>
-                                        {(g.tickets || []).length}
-                                    </td>
-                                    <PermissableComponent permitted={presale}>
-                                        <td>
-                                            {this.getFormerEventEntries(g)}
-                                        </td>
-                                    </PermissableComponent>
-                                    <PermissableComponent permitted={presale}>
-                                        <td>
-                                            <Input
-                                                type="number"
-                                                hint={t(`${this.TRANSLATE_PREFIX}.table.noQuota`)}
-                                                placeholder={t(`${this.TRANSLATE_PREFIX}.table.noQuota`)}
-                                                aria-label={t(`${this.TRANSLATE_PREFIX}.table.noQuota`)}
-                                                value={this.getGroupAllocations(g)}
-                                                onChange={(e) => this.updateGroupsQuota(g, e.target.value)}/>
-                                        </td>
-                                    </PermissableComponent>
-                                    <PermissableComponent permitted={presale}>
-                                        <td>
-                                            {this.getGroupAllocatedCount(g, constants.ALLOCATION_TYPES.PRE_SALE)}
-                                        </td>
-                                    </PermissableComponent>
-                                </tr>
-
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            </div>
-        );
-    }
+              </th>
+              <PermissableComponent permitted={presale}>
+                <th>
+                  <span className="pl-1 pr-1">
+                    {t (`${this.TRANSLATE_PREFIX}.table.totalEntered`)}
+                  </span>{' '}
+                  (
+                  {this.eventsService
+                    .getFormerEventId ()
+                    .replace ('MIDBURN', '')}
+                  )
+                </th>
+                <th>{t (`${this.TRANSLATE_PREFIX}.table.quota`)}</th>
+                <th>{t (`${this.TRANSLATE_PREFIX}.table.bucket`)}</th>
+                <th>{t (`${this.TRANSLATE_PREFIX}.table.allocated`)}</th>
+              </PermissableComponent>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {groups.map (g => {
+              return (
+                <tr key={g.id}>
+                  <td>
+                    <NavLink to={`${g.id}`}>
+                      {this.groupsService.getPropertyByLang (g, 'name', lng)}
+                    </NavLink>
+                  </td>
+                  <td>
+                    <DataHoverCard
+                      title={this.getManagerProp (g, 'name')}
+                      panel={this.getManagerExtraDetails (g)}
+                    />
+                  </td>
+                  <td>{(g.members || []).length}</td>
+                  <PermissableComponent permitted={presale}>
+                    <td>{this.getFormerEventEntries (g)}</td>
+                  </PermissableComponent>
+                  <PermissableComponent permitted={presale && groupQuotas}>
+                    <td>
+                      <NumberEditor
+                        value={this.getGroupQuota (g)}
+                        min={0}
+                        onChange={e => this.updateGroupsQuota (g, e)}
+                      />
+                    </td>
+                    <td>
+                      {this.getGroupsBucketCount (
+                        g,
+                        constants.ALLOCATION_TYPES.PRE_SALE
+                      )}
+                    </td>
+                    <td>
+                      {this.getGroupTotalAllocated (
+                        g,
+                        constants.ALLOCATION_TYPES.PRE_SALE
+                      )}
+                    </td>
+                  </PermissableComponent>
+                </tr>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
 }
 
-export const GroupsTable = withRouter(withI18n()(BaseGroupsTable));
+export const GroupsTable = withRouter (withI18n () (BaseGroupsTable));

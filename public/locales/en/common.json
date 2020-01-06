@@ -3,7 +3,7 @@
   "camps": "Camps",
   "arts": "Arts",
   "he": "עברית",
-  "en": "English",
+  "en": "ENG",
   "hebrew": "Hebrew",
   "email": "Email",
   "password": "Password",
@@ -34,7 +34,14 @@
   "by": "By",
   "allocationsLastDate": "Last date to allocate tickets",
   "filterCharts": "Filter charts by filter",
+  "new": "New",
+  "round": "Round",
+  "published": "Published",
+  "search": "Search",
   "nav": {
+    "allocations": {
+      "title": "Appreciation tickets {{year}}"
+    },
     "gate": {
       "manage": "Entry management",
       "suppliers": "Suppliers entries",
@@ -49,9 +56,9 @@
     "camps": {
       "title": "Camps",
       "search": "Find camps",
-      "my": "My camp",
+      "my": "My camp {{name}}",
       "manage": "Manage my camp",
-      "management": "Manage camps",
+      "management": "Camps admin",
       "allocate": "Allocate tickets for my camp",
       "allocateAdmin": "Manage camps allocations",
       "create": {
@@ -86,9 +93,9 @@
     "arts": {
       "title": "Art installations",
       "search": "Find Art installations",
-      "my": "My Art installation",
+      "my": "My Art installation {{name}}",
       "manage": "Manage my Art installation",
-      "management": "Manage Art installations",
+      "management": "Art installations admin",
       "allocate": "Allocate tickets for my art installation",
       "allocateAdmin": "Manage art installations allocations"
     }
@@ -98,14 +105,6 @@
     "tooltips": {
       "allocate": "Add/Remove allocation",
       "allocatedByOtherGroup": "Has ticket allocated by another {{groupType}}"
-    },
-    "charts": {
-      "allocationsUsage": "Allocation Usage",
-      "allocationsUsed": "Allocations used",
-      "allocationsLeft": "Allocations left",
-      "membersTickets": "Tickets",
-      "membersWithTickets": "Members with tickets",
-      "membersWithoutTickets": "Members without tickets"
     },
     "allocationWarning": {
       "title": "Quota full",

@@ -3,7 +3,7 @@
   "camps": "מחנות נושא",
   "arts": "מיצבים",
   "he": "עברית",
-  "en": "English",
+  "en": "ENG",
   "email": "דואר אלקטרוני",
   "password": "סיסמה",
   "login": "כניסה למערכת",
@@ -27,7 +27,7 @@
   "manage": "נהל",
   "actions": "פעולות",
   "saveChanges": "שמור שינויים",
-  "export": "ייצא לאקסל",
+  "export": "ייצא לקובץ",
   "lastUpdate": "עודכן לאחרונה ב",
   "theme_camps": "מחנה נושא",
   "art_installations": "מיצב",
@@ -35,7 +35,14 @@
   "summery": "סיכום",
   "allocationsLastDate": "תאריך אחרון להקצאת כרטיסים",
   "filterCharts": "הצג נתונים לאחר פילטר בסיכום",
+  "new": "חדש",
+  "round": "סבב",
+  "published": "פורסם",
+  "search": "חיפוש",
   "nav": {
+    "allocations": {
+      "title": "הקצאות הוקרה {{year}}"
+    },
     "gate": {
       "manage": "ניהול כניסות",
       "suppliers": "ניהול כניסות ספקים",
@@ -50,9 +57,9 @@
     "camps": {
       "title": "מחנות נושא",
       "search": "מצא מחנות",
-      "my": "המחנה שלי",
+      "my": "המחנה שלי {{name}}",
       "manage": "ניהול המחנה שלי",
-      "management": "ניהול מחנות",
+      "management": "אדמין מחנות נושא",
       "allocate": "הקצה כרטיסים למחנה שלי",
       "allocateAdmin": "נהל הקצאות למחנות נושא",
       "create": {
@@ -87,9 +94,9 @@
     "arts": {
       "title": "מיצבים",
       "search": "מצא מיצבים",
-      "my": "המיצב שלי",
+      "my": "המיצב שלי {{name}}",
       "manage": "ניהול המיצב שלי",
-      "management": "ניהול מיצבים",
+      "management": "אדמין מיצבי אומנות",
       "allocate": "הקצה כרטיסים למיצב שלי",
       "allocateAdmin": "נהל הקצאות למיצבים"
     }

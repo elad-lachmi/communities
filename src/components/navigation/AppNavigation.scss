@@ -1,8 +1,12 @@
 .Navbar {
+  font-weight: 400;
+  nav {
+    height: 70px !important;
+  }
   .NavbarBrand {
     background: url("../../assets/images/midburn_logo.svg");
-    background-size: 50px;
-    padding-left: 30px;
+    background-size: 70px;
+    padding-left: 45px;
     background-repeat: no-repeat;
     background-position: -10px 50%;
     color: black !important;
